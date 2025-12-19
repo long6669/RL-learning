@@ -7,7 +7,6 @@ from collections import deque
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.quantization import no_observer_set
 
 # ==========================================
 # 1. 定义神经网络 (Q-Network)
@@ -84,7 +83,9 @@ def optimize_model():
 
     state_action_values = policy_net(state_batch).gather(1, action_batch)
     with torch.no_grad():
-        next_state_values = target_net(next_state_batch).max(1)[0]
+        next_state_actions = policy_net(next_state_batch).max(1)[1].unsqueeze(1)
+        next_state_values = target_net(next_state_batch).gather(1, next_state_actions).squeeze(1)
+
         next_state_values = next_state_values * (1 - done_batch)
     
     expected_state_action_values = (next_state_values * GAMMA) + reward_batch
@@ -100,7 +101,7 @@ def optimize_model():
 # ==========================================
 # 6. 训练主循环
 # ==========================================
-num_episodes = 300
+num_episodes = 600
 print(f"🚀 开始 DQN 训练 CartPole，共 {num_episodes} 局...")
 
 episode_durations = []
